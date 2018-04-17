@@ -12,31 +12,10 @@ https://dzone.com/articles/web-server-c*/
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include "server.h"
 #include <fcntl.h>
 #include <errno.h>
 
-#define MAXBUFF  1024
-#define MAXCLIENT 10
-#define UNKNOWN -1
-
-typedef struct {
-    char *ext;
-    char *mediatype;
-} extn;
-
-//Possible media types
-extn extensions[] ={
-    {"jpg","image/jpeg"},
-    {"js",  "text/javascript"  },
-    {"css", "text/css" },
-    {"html","text/html" },
-    {0,0}
-};
-
-void error(const char *msg);
-int connection(int fd, char *root);
-void send_new(int fd, char *msg, int len);
+#include "server.h"
 
 int  main(int argc, char const *argv[]) {
     if (argc <3 ) {
@@ -60,24 +39,26 @@ int  main(int argc, char const *argv[]) {
     serv_addr.sin_port = htons(portno); //Listen on port 5000
 
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+
     listen(listenfd, MAXCLIENT); // maximum number of client connections to queue
+    int pid;
     while (1) {
         printf("pre accept lalala\n");
         int connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
         printf("post accept lalala\n");
         if (connfd < 0) {
             error("ERROR on accept.");
-        }else{
-            /*pid = fork();
+        }
+            pid = fork();
             if (pid < 0) {
             error("ERROR on fork");
-        }else if (pid == 0)*/ {
+        }else if (pid == 0){
 
         printf("doing the connection() function \n");
         connection(connfd, root);
         //exit(0);
     }
-}
+
 close(connfd);
 }
 close(listenfd);
@@ -200,12 +181,3 @@ void send_new(int fd, char *msg, int len) {
         msg += bytes_written;
     }
 }
-/*
-Creating a thread
-int pthread_create(pthread_t *id,
-const pthread_attr_t *attr,
-void *(func)(void *),
-void *arg);
-Id of thread itself:
-pthread_t pthread_self();
-*/
