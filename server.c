@@ -1,7 +1,9 @@
-/*Qianqian Zheng
+/*Name: Qianqian Zheng
+Student #: 813288
+gitlab login id: q.zheng11@student.unimelb.edu.au
 */
-/*some code is taken from server.c from workshop 5 and
-https://dzone.com/articles/web-server-c*/
+/*parts of the code here is modified based on server.c from workshop 5 and
+example server from https://dzone.com/articles/web-server-c*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,8 +20,9 @@ https://dzone.com/articles/web-server-c*/
 #include "server.h"
 
 int  main(int argc, char const *argv[]) {
+
     if (argc <3 ) {
-        error("no port");
+        error("no port/path");
     }
     int portno;
     char root[100];
@@ -40,32 +43,29 @@ int  main(int argc, char const *argv[]) {
 
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
-    listen(listenfd, MAXCLIENT); // maximum number of client connections to queue
+    listen(listenfd, MAXCLIENT);
     int pid;
     while (1) {
-        printf("pre accept lalala\n");
         int connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-        printf("post accept lalala\n");
+
         if (connfd < 0) {
             error("ERROR on accept.");
         }
-            pid = fork();
-            if (pid < 0) {
+        pid = fork();
+        if (pid < 0) {
             error("ERROR on fork");
         }else if (pid == 0){
 
-        printf("doing the connection() function \n");
-        connection(connfd, root);
-        //exit(0);
+            connection(connfd, root);
+        }
+
+        close(connfd);
     }
+    close(listenfd);
 
-close(connfd);
+    return 0;
 }
-close(listenfd);
-
-return 0;
-}
-/*for errors*/
+/*for handling errors*/
 void error(const char *msg) {
     perror(msg);
     exit(1);
@@ -79,15 +79,13 @@ serves files in a web root,
 sends the HTTP error codes.
 */
 int connection(int fd, char *root) {
-    char *buffer = calloc(MAXBUFF,sizeof(char));;
-    //char dir[200];
-    //strcpy(dir,root);
+    char *buffer = calloc(MAXBUFF,sizeof(char));
     int read_new = read(fd,buffer, MAXBUFF-1);
     if (read_new <= 0) {
         printf("Recieve Failed\n");
     }
 
-    printf("buffer: %s\n", buffer);
+    //printf("buffer: %s\n", buffer);
     // Check if it is a get request
     if (strncmp(buffer, "GET ", 4) != 0) {
         printf("wrong path %s\n", buffer);
@@ -101,13 +99,11 @@ int connection(int fd, char *root) {
         if(ptr[strlen(file) - 1] == '/'){
             strcat(file, "index.html");
         }
-        //strcat(root,file);
-        char *path = malloc(strlen(root)+strlen(file)+1);//+1 for the null-terminator
-        //in real code you would check for errors in malloc here
+        //string for actual path to open file
+        char *path = malloc(strlen(root)+strlen(file)+1);
         strcpy(path, root);
         strcat(path, file);
 
-        printf("dir after strcat: %s\n",path );
         //read file from system
         int openfd = open(path, O_RDONLY);
         free(path);
@@ -118,7 +114,6 @@ int connection(int fd, char *root) {
 
         } else{
             char* s = strchr(ptr, '.');
-            printf("extention: %s\n", s);
             int i;
             for (i = 0; extensions[i].ext != NULL; i++) {
                 if (strcmp(s + 1, extensions[i].ext) == 0) {
@@ -126,24 +121,22 @@ int connection(int fd, char *root) {
                     send_new(fd, "HTTP/1.0 200 OK\r\n",UNKNOWN);
                     char *mime_type=  extensions[i].mediatype;
 
-                    //printf("mime string %s\n",extensions[i].mediatype );
                     send_new(fd,"Content-Type: ",UNKNOWN);
                     send_new(fd,mime_type, UNKNOWN);
                     send_new(fd,"\r\n\r\n",UNKNOWN);
                     while (1) {
                         char *sendbuffer = calloc(MAXBUFF,sizeof(char));
-                        // Read data into buffer.  We may not have enough to fill up buffer, so we
-                        // store how many bytes were actually read in bytes_read.
+                        // Read data into buffer, store how many bytes were
+                        //actually read in bytes_read.
                         int bytes_read = read(openfd, sendbuffer, MAXBUFF);
                         if (bytes_read == 0) {
-                            // We're done reading from the file
+                            //  done reading from the file
                             break;
                         }else if (bytes_read < 0) {
                             printf("error reading %s\n",extensions[i].mediatype);
                             break;
                         }
-                        printf("bytes read into buffer from file %d\nsize of buffer %lu\n",bytes_read, sizeof(sendbuffer));
-                        //void* p = sendbuffer;
+                        //send file
                         send_new(fd, sendbuffer, bytes_read);
                         free(sendbuffer);
                     }
@@ -152,13 +145,12 @@ int connection(int fd, char *root) {
             }
 
         }
-        printf("lalalala\n");
+
         close(openfd);
-        printf("2-lalalala\n");
+
         shutdown(fd, SHUT_RDWR);
     }
     free(buffer);
-    printf("3-lalalala\n");
     return 0;
 }
 /*
@@ -168,14 +160,12 @@ void send_new(int fd, char *msg, int len) {
 
     if(len == UNKNOWN) {
         len = strlen(msg);
-    }printf("sending %d bytes message\n", len);
+    }
     while (len > 0) {
         int bytes_written = write(fd, msg, len);
         if (bytes_written <= 0) {
             // handle errors
             printf("Error in send\n");
-        }else{
-            printf("Sent %d bytes\nmessage is %s\n", bytes_written, msg);
         }
         len -= bytes_written;
         msg += bytes_written;
